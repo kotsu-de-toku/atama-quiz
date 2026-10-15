@@ -26,7 +26,9 @@ def crypt(data: str, decrypt: bool) -> str:
     args = ["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "200000", "-a", "-A", "-pass", "env:TOKEN_KEY"]
     if decrypt:
         args.append("-d")
-    r = subprocess.run(args, input=data.encode(), capture_output=True, check=True)
+    r = subprocess.run(args, input=data.strip().encode(), capture_output=True)
+    if r.returncode != 0:
+        raise SystemExit("トークンの鍵が開けられません（Secrets の TOKEN_KEY を確認）: " + r.stderr.decode(errors="replace")[:200])
     return r.stdout.decode().strip()
 
 
@@ -147,4 +149,13 @@ def post():
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "check"
-    {"check": check, "post": post}[mode]()
+    try:
+        {"check": check, "post": post}[mode]()
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            # GitHub の画面（と失敗メール）に理由が出るようにする
+            print(f"::error::{e.code}")
+        raise
+    except Exception as e:
+        print(f"::error::{type(e).__name__}: {e}")
+        raise

@@ -10,7 +10,7 @@
 - トークンは secret/token.enc（暗号化）。鍵は GitHub Secrets の TOKEN_KEY
 - トークンは7日ごとに延長し、新しくなっていれば暗号化し直して保存する
 """
-import json, os, subprocess, sys, time, shutil, urllib.parse, urllib.request, urllib.error
+import hashlib, json, os, subprocess, sys, time, shutil, urllib.parse, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
 
 API = "https://graph.instagram.com/v23.0"
@@ -26,9 +26,12 @@ def crypt(data: str, decrypt: bool) -> str:
     args = ["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "200000", "-a", "-A", "-pass", "env:TOKEN_KEY"]
     if decrypt:
         args.append("-d")
-    r = subprocess.run(args, input=data.strip().encode(), capture_output=True)
+    key = os.environ.get("TOKEN_KEY", "").strip()   # 貼り付けで付いた改行・空白を取り除く
+    env = dict(os.environ, TOKEN_KEY=key)
+    r = subprocess.run(args, input=data.strip().encode(), capture_output=True, env=env)
     if r.returncode != 0:
-        raise SystemExit("トークンの鍵が開けられません（Secrets の TOKEN_KEY を確認）: " + r.stderr.decode(errors="replace")[:200])
+        fp = hashlib.sha256(key.encode()).hexdigest()[:8]   # 鍵そのものは出さず、照合用の指紋だけ
+        raise SystemExit(f"トークンの鍵が開けられません（Secrets の TOKEN_KEY を確認。指紋 {fp}、長さ {len(key)}）: " + r.stderr.decode(errors="replace")[:120])
     return r.stdout.decode().strip()
 
 

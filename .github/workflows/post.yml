@@ -1,0 +1,43 @@
+# 毎朝7時ごろ（日本時間）に、その日の問題をインスタに投稿する
+# 手動で「Run workflow」から check（確認だけ）/ post（投稿）も選べる
+name: 毎朝の投稿
+
+on:
+  schedule:
+    - cron: "47 21 * * *"   # 21:47 UTC ＝ 6:47 JST（GitHubの混雑で数分〜十数分遅れるので早めに設定）
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "check＝つながるか確認だけ / post＝今日の分を投稿"
+        required: true
+        default: check
+        type: choice
+        options: [check, post]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 投稿する
+        env:
+          TOKEN_KEY: ${{ secrets.TOKEN_KEY }}
+        run: python3 scripts/post.py "${{ github.event.inputs.mode || 'post' }}"
+      - name: 結果を保存する
+        if: always()
+        run: |
+          git config user.name "kotsu-de-toku-bot"
+          git config user.email "kotsu-de-toku@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "投稿の記録 $(TZ=Asia/Tokyo date +%F)"
+            git pull --rebase
+            git push
+          fi

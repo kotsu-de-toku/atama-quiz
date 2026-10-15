@@ -8,11 +8,11 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "check＝つながるか確認だけ / post＝今日の分を投稿"
+        description: "check＝つながるか確認 / dryrun＝投稿の直前まで試す（投稿しない）/ post＝今日の分を投稿"
         required: true
         default: check
         type: choice
-        options: [check, post]
+        options: [check, dryrun, post]
 
 permissions:
   contents: write

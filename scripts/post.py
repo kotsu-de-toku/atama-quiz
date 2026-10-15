@@ -110,10 +110,10 @@ def check():
     maybe_refresh(token)
 
 
-def post():
+def post(dry_date=None):
     token = get_token()
     token = maybe_refresh(token)
-    today = datetime.now(JST).strftime("%Y-%m-%d")
+    today = dry_date or datetime.now(JST).strftime("%Y-%m-%d")
     src = os.path.join(ROOT, "queue", today)
     dst = os.path.join(ROOT, "posted", today)
     if os.path.exists(dst):
@@ -145,6 +145,9 @@ def post():
         raise SystemExit("画像が1枚しかありません（4枚の想定）")
     car = call("POST", f"{uid}/media", media_type="CAROUSEL", children=",".join(children), caption=caption, access_token=token)
     wait_ready(car["id"], token)
+    if dry_date:
+        print(f"リハーサル成功：{today} の {len(children)} 枚とキャプションを、インスタが受け取れました（投稿はしていません）")
+        return
     pub = call("POST", f"{uid}/media_publish", creation_id=car["id"], access_token=token)
     print(f"投稿しました：{today}（id {pub['id']}）")
 
@@ -157,7 +160,12 @@ def post():
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "check"
     try:
-        {"check": check, "post": post}[mode]()
+        if mode == "dryrun":
+            # 投稿せずに、queue のいちばん古い日付で「投稿の直前」まで試す
+            dates = sorted(os.listdir(os.path.join(ROOT, "queue")))
+            post(dry_date=dates[0])
+        else:
+            {"check": check, "post": post}[mode]()
     except SystemExit as e:
         if e.code not in (None, 0):
             # GitHub の画面（と失敗メール）に理由が出るようにする

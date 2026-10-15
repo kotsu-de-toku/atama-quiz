@@ -119,6 +119,10 @@ def post():
     if os.path.exists(dst):
         print(f"{today} はもう投稿済みです")
         return
+    start = load_state().get("start_date", "9999-12-31")
+    if today < start and not os.path.isdir(src):
+        print(f"開始日（{start}）より前なので、今日は投稿しません")
+        return
     if not os.path.isdir(src):
         raise SystemExit(f"{today} の投稿が queue にありません（問題の貯金が切れています）")
 

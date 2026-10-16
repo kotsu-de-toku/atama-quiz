@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>予約用ページ</title>
+<style>
+  :root { --ink:#23262F; --sub:#6E7180; --paper:#FBF9F4; --rule:#DAD5C9; --ac:#2F6FEB; --ok:#14936A; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: "BIZ UDGothic", "Hiragino Sans", "Noto Sans JP", sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--ink); color: #fff; padding: 14px 16px; }
+  header h1 { margin: 0; font-size: 18px; }
+  header p { margin: 4px 0 0; font-size: 12px; opacity: .8; }
+  main { max-width: 560px; margin: 0 auto; padding: 12px 16px 60px; }
+  .card { background: #fff; border: 2px solid var(--ink); border-radius: 16px; padding: 14px; margin: 14px 0; box-shadow: 4px 4px 0 var(--ink); }
+  .card.done { opacity: .55; box-shadow: none; }
+  .top { display: flex; align-items: center; gap: 10px; }
+  .chip { color: #fff; border-radius: 99px; padding: 4px 12px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .date { font-size: 17px; font-weight: 700; }
+  .q { margin-left: auto; color: var(--sub); font-size: 14px; }
+  .imgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; }
+  .imgs figure { margin: 0; position: relative; }
+  .imgs img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); display: block; }
+  .imgs figure.hide img { filter: blur(9px); }
+  .imgs figure.hide::after { content: "タップで表示"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--ink); }
+  .imgs figcaption { text-align: center; font-size: 11px; color: var(--sub); margin-top: 2px; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  button { font: inherit; font-size: 15px; font-weight: 700; padding: 12px 8px; border-radius: 10px; border: 2px solid var(--ink); background: #fff; color: var(--ink); }
+  button.main { background: var(--ac); color: #fff; border-color: var(--ac); }
+  label.chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 15px; }
+  label.chk input { width: 22px; height: 22px; }
+  .msg { font-size: 13px; color: var(--ok); min-height: 1.2em; margin-top: 6px; }
+  .howto { background: #fff; border: 1px dashed var(--rule); border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.7; }
+  .past { text-align: center; margin: 18px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>1日1問 あたまの体操｜予約用ページ</h1>
+  <p>インスタの予約投稿に使う画像とキャプション（毎晩自動で増えます）</p>
+</header>
+<main>
+  <div class="howto">
+    ① 「4枚を保存」→ 写真に保存<br>
+    ② 「キャプションをコピー」<br>
+    ③ インスタで ＋ → 投稿 → 1〜4の順に選ぶ → 貼り付け → その他の設定 →「この投稿の日時を指定」→ <b>その日の7:00</b><br>
+    ④ 予約できたら「予約した」にチェック<br>
+    <small>※2〜4枚目はネタバレ防止でぼかしています（タップで表示）</small>
+  </div>
+  <div id="list"></div>
+  <div class="past"><button id="showPast">予約・投稿済みの日も表示</button></div>
+</main>
+<script>
+const COLORS = { "数列":"#2F6FEB", "図形":"#14936A", "言葉":"#E0662A", "論理":"#7A4FD6", "ひらめき":"#D99A00", "おさらい":"#4A5468", "難問":"#C8243B" };
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }
+};
+let showPast = false;
+const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+
+async function load() {
+  const res = await fetch("list.json?" + Date.now());
+  const items = await res.json();
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  for (const it of items) {
+    const done = store.get("done:" + it.date) === "1";
+    if (!showPast && (it.date < today || done)) continue;
+    list.appendChild(card(it, done));
+  }
+  if (!list.children.length) list.innerHTML = '<p style="text-align:center;color:#6E7180">表示する日がありません</p>';
+}
+
+function card(it, done) {
+  const [y, m, d] = it.date.split("-");
+  const el = document.createElement("section");
+  el.className = "card" + (done ? " done" : "");
+  const base = "queue/" + it.date + "/";
+  el.innerHTML = `
+    <div class="top">
+      <span class="chip" style="background:${COLORS[it.genre] || "#23262F"}">${it.dow} ${it.genre}</span>
+      <span class="date">${+m}/${+d}</span>
+      <span class="q">${it.q || ""}</span>
+    </div>
+    <div class="imgs">${[1,2,3,4].map(n => `<figure class="${n > 1 ? "hide" : ""}"><img loading="lazy" src="${base}${n}.jpg" alt="${n}枚目"><figcaption>${n}</figcaption></figure>`).join("")}</div>
+    <div class="btns"><button class="main save">4枚を保存</button><button class="copy">キャプションをコピー</button></div>
+    <label class="chk"><input type="checkbox" ${done ? "checked" : ""}> 予約した</label>
+    <div class="msg"></div>`;
+  const msg = el.querySelector(".msg");
+  el.querySelectorAll("figure.hide").forEach(f => f.addEventListener("click", () => f.classList.remove("hide")));
+  el.querySelector(".save").onclick = async () => {
+    msg.textContent = "準備中…";
+    try {
+      const files = await Promise.all([1,2,3,4].map(async n => {
+        const b = await (await fetch(base + n + ".jpg")).blob();
+        return new File([b], `${it.date}_${n}.jpg`, { type: "image/jpeg" });
+      }));
+      if (navigator.canShare && navigator.canShare({ files })) {
+        await navigator.share({ files });
+        msg.textContent = "共有メニューから「画像を保存」を選んでください";
+      } else {
+        el.querySelectorAll("figure").forEach(f => f.classList.remove("hide"));
+        msg.textContent = "この端末ではまとめて保存できません。画像を1枚ずつ長押しして保存してください";
+      }
+    } catch (e) { msg.textContent = e.name === "AbortError" ? "" : "保存できませんでした：" + e.message; }
+  };
+  el.querySelector(".copy").onclick = async () => {
+    try {
+      const t = await (await fetch(base + "caption.txt?" + Date.now())).text();
+      await navigator.clipboard.writeText(t.trim());
+      msg.textContent = "キャプションをコピーしました";
+    } catch (e) { msg.textContent = "コピーできませんでした：" + e.message; }
+  };
+  el.querySelector("input").onchange = e => { store.set("done:" + it.date, e.target.checked ? "1" : ""); el.classList.toggle("done", e.target.checked); };
+  return el;
+}
+
+document.getElementById("showPast").onclick = e => { showPast = !showPast; e.target.textContent = showPast ? "これからの日だけ表示" : "予約・投稿済みの日も表示"; load(); };
+load().catch(e => { document.getElementById("list").textContent = "読み込めませんでした：" + e.message; });
+</script>
+</body>
+</html>

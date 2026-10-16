@@ -3,8 +3,9 @@
 name: 毎朝の投稿
 
 on:
-  schedule:
-    - cron: "47 21 * * *"   # 21:47 UTC ＝ 6:47 JST（GitHubの混雑で数分〜十数分遅れるので早めに設定）
+  # 2026-10-16 一時停止（作業用のFacebookアカウントが停止されたため）。再開するときは下の2行の「#」を外す
+  # schedule:
+  #   - cron: "47 21 * * *"   # 21:47 UTC ＝ 6:47 JST
   workflow_dispatch:
     inputs:
       mode:

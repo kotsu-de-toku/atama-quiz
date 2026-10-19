@@ -20,7 +20,7 @@
   .chip { color: #fff; border-radius: 99px; padding: 4px 12px; font-size: 14px; font-weight: 700; white-space: nowrap; }
   .date { font-size: 17px; font-weight: 700; }
   .q { margin-left: auto; color: var(--sub); font-size: 14px; }
-  .imgs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
+  .imgs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; margin: 12px 0; }
   .imgs figure { margin: 0; position: relative; }
   .imgs img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 6px; border: 1px solid var(--rule); display: block; }
   .imgs figure.hide img { filter: blur(9px); }
@@ -43,11 +43,11 @@
 </header>
 <main>
   <div class="howto">
-    ① 「4枚を保存」→ 写真に保存<br>
+    ① 「○枚を保存」→ 写真に保存<br>
     ② 「キャプションをコピー」<br>
-    ③ インスタで ＋ → 投稿 → 1〜4の順に選ぶ → 貼り付け → その他の設定 →「この投稿の日時を指定」→ <b>その日の7:00</b><br>
+    ③ インスタで ＋ → 投稿 → 1から順に全部選ぶ → 貼り付け → その他の設定 →「この投稿の日時を指定」→ <b>その日の7:00</b><br>
     ④ 予約できたら「予約した」にチェック<br>
-    <small>※2〜4枚目はネタバレ防止でぼかしています（タップで表示）</small>
+    <small>※2枚目からはネタバレ防止でぼかしています（タップで表示）</small>
   </div>
   <div id="list"></div>
   <div class="past"><button id="showPast">予約・投稿済みの日も表示</button></div>
@@ -79,14 +79,15 @@ function card(it, done) {
   const el = document.createElement("section");
   el.className = "card" + (done ? " done" : "");
   const base = "queue/" + it.date + "/";
+  const nums = Array.from({ length: it.n || 4 }, (_, i) => i + 1);
   el.innerHTML = `
     <div class="top">
       <span class="chip" style="background:${COLORS[it.genre] || "#23262F"}">${it.dow} ${it.genre}</span>
       <span class="date">${+m}/${+d}</span>
       <span class="q">${it.q || ""}</span>
     </div>
-    <div class="imgs">${[1,2,3,4].map(n => `<figure class="${n > 1 ? "hide" : ""}"><img loading="lazy" src="${base}${n}.jpg" alt="${n}枚目"><figcaption>${n}</figcaption></figure>`).join("")}</div>
-    <div class="btns"><button class="main save">4枚を保存</button><button class="copy">キャプションをコピー</button></div>
+    <div class="imgs">${nums.map(n => `<figure class="${n > 1 ? "hide" : ""}"><img loading="lazy" src="${base}${n}.jpg" alt="${n}枚目"><figcaption>${n}</figcaption></figure>`).join("")}</div>
+    <div class="btns"><button class="main save">${nums.length}枚を保存</button><button class="copy">キャプションをコピー</button></div>
     <label class="chk"><input type="checkbox" ${done ? "checked" : ""}> 予約した</label>
     <div class="msg"></div>`;
   const msg = el.querySelector(".msg");
@@ -94,7 +95,7 @@ function card(it, done) {
   el.querySelector(".save").onclick = async () => {
     msg.textContent = "準備中…";
     try {
-      const files = await Promise.all([1,2,3,4].map(async n => {
+      const files = await Promise.all(nums.map(async n => {
         const b = await (await fetch(base + n + ".jpg")).blob();
         return new File([b], `${it.date}_${n}.jpg`, { type: "image/jpeg" });
       }));

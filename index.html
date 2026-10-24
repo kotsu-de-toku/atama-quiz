@@ -31,6 +31,8 @@
   button.main { background: var(--ac); color: #fff; border-color: var(--ac); }
   label.chk { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 15px; }
   label.chk input { width: 22px; height: 22px; }
+  .reel { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #FFF4E5; font-size: 13px; }
+  .reel .btns { margin-top: 8px; }
   .msg { font-size: 13px; color: var(--ok); min-height: 1.2em; margin-top: 6px; }
   .howto { background: #fff; border: 1px dashed var(--rule); border-radius: 12px; padding: 10px 14px; font-size: 13px; line-height: 1.7; }
   .past { text-align: center; margin: 18px 0; }
@@ -88,6 +90,8 @@ function card(it, done) {
     </div>
     <div class="imgs">${nums.map(n => `<figure class="${n > 1 ? "hide" : ""}"><img loading="lazy" src="${base}${n}.jpg" alt="${n}枚目"><figcaption>${n}</figcaption></figure>`).join("")}</div>
     <div class="btns"><button class="main save">${nums.length}枚を保存</button><button class="copy">キャプションをコピー</button></div>
+    ${it.reel ? `<div class="reel"><b>🎬 リール動画もあります</b>（フィードとは別に「リール」で投稿）
+      <div class="btns"><button class="rsave">動画を保存</button><button class="rcopy">リールの説明をコピー</button></div></div>` : ""}
     <label class="chk"><input type="checkbox" ${done ? "checked" : ""}> 予約した</label>
     <div class="msg"></div>`;
   const msg = el.querySelector(".msg");
@@ -115,6 +119,22 @@ function card(it, done) {
       msg.textContent = "キャプションをコピーしました";
     } catch (e) { msg.textContent = "コピーできませんでした：" + e.message; }
   };
+  if (it.reel) {
+    const rbase = "reels/" + it.date + "/";
+    el.querySelector(".rsave").onclick = async () => {
+      msg.textContent = "準備中…";
+      try {
+        const b = await (await fetch(rbase + "reel.mp4?" + Date.now())).blob();
+        const files = [new File([b], it.date + "_reel.mp4", { type: "video/mp4" })];
+        if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); msg.textContent = "共有メニューから「ビデオを保存」かインスタを選んでください"; }
+        else { location.href = rbase + "reel.mp4"; }
+      } catch (e) { msg.textContent = e.name === "AbortError" ? "" : "保存できませんでした：" + e.message; }
+    };
+    el.querySelector(".rcopy").onclick = async () => {
+      try { const t = await (await fetch(rbase + "caption.txt?" + Date.now())).text(); await navigator.clipboard.writeText(t.trim()); msg.textContent = "リールの説明をコピーしました"; }
+      catch (e) { msg.textContent = "コピーできませんでした：" + e.message; }
+    };
+  }
   el.querySelector("input").onchange = e => { store.set("done:" + it.date, e.target.checked ? "1" : ""); el.classList.toggle("done", e.target.checked); };
   return el;
 }

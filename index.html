@@ -91,7 +91,8 @@ function card(it, done) {
     <div class="imgs">${nums.map(n => `<figure class="${n > 1 ? "hide" : ""}"><img loading="lazy" src="${base}${n}.jpg" alt="${n}枚目"><figcaption>${n}</figcaption></figure>`).join("")}</div>
     <div class="btns"><button class="main save">${nums.length}枚を保存</button><button class="copy">キャプションをコピー</button></div>
     ${it.reel ? `<div class="reel"><b>🎬 リール動画もあります</b>（フィードとは別に「リール」で投稿）
-      <div class="btns"><button class="rsave">動画を保存</button><button class="rcopy">リールの説明をコピー</button></div></div>` : ""}
+      <div class="btns"><button class="rsave">動画を保存</button><button class="rcopy">リールの説明をコピー</button><button class="ccopy">答えコメントをコピー</button></div>
+      <div style="margin-top:6px">リール投稿後、「中の人の結果」を書き足して自分でコメント → ピン留め</div></div>` : ""}
     <label class="chk"><input type="checkbox" ${done ? "checked" : ""}> 予約した</label>
     <div class="msg"></div>`;
   const msg = el.querySelector(".msg");
@@ -129,6 +130,10 @@ function card(it, done) {
         if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); msg.textContent = "共有メニューから「ビデオを保存」かインスタを選んでください"; }
         else { location.href = rbase + "reel.mp4"; }
       } catch (e) { msg.textContent = e.name === "AbortError" ? "" : "保存できませんでした：" + e.message; }
+    };
+    el.querySelector(".ccopy").onclick = async () => {
+      try { const t = await (await fetch(rbase + "comment.txt?" + Date.now())).text(); await navigator.clipboard.writeText(t.trim()); msg.textContent = "答えコメントをコピーしました（中の人の結果を書き足してね）"; }
+      catch (e) { msg.textContent = "コピーできませんでした：" + e.message; }
     };
     el.querySelector(".rcopy").onclick = async () => {
       try { const t = await (await fetch(rbase + "caption.txt?" + Date.now())).text(); await navigator.clipboard.writeText(t.trim()); msg.textContent = "リールの説明をコピーしました"; }

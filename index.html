@@ -55,7 +55,7 @@
   <div class="past"><button id="showPast">予約・投稿済みの日も表示</button></div>
 </main>
 <script>
-const COLORS = { "数列":"#2F6FEB", "図形":"#14936A", "言葉":"#E0662A", "論理":"#7A4FD6", "ひらめき":"#D99A00", "おさらい":"#4A5468", "難問":"#C8243B" };
+const COLORS = { "数列":"#2F6FEB", "図形":"#14936A", "言葉":"#E0662A", "論理":"#7A4FD6", "場合の数":"#7A4FD6", "ひらめき":"#D99A00", "おさらい":"#4A5468", "難問":"#C8243B" };
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
   set(k, v) { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} }

@@ -61,4 +61,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        if e.code not in (None, 0):
+            print(f"::error::{str(e.code)[:500]}")   # GitHub の画面に理由が出るようにする（合鍵は伏せ字済み）
+        raise

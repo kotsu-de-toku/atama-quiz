@@ -3,11 +3,11 @@
 name: 毎晩の数字あつめ
 
 on:
-  schedule:
-    - cron: "20 14 * * *"   # 14:20 UTC ＝ 23:20 JST
+  # 2026-11-11 停止：インスタ側で「API access blocked.」（アプリごと止められている。10/16 の作業用Facebookアカウント停止の影響）。
+  # 新しく使えるアプリと合鍵ができたら、下の2行の「#」を外す
+  # schedule:
+  #   - cron: "20 14 * * *"   # 14:20 UTC ＝ 23:20 JST
   workflow_dispatch:
-  push:   # 仕組みを直したときにも1回動かして確かめる
-    paths: [scripts/insights.py, .github/workflows/insights.yml]
 
 permissions:
   contents: write

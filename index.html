@@ -62,6 +62,26 @@ const store = {
 };
 let showPast = false;
 const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+const tomorrow = new Date(Date.now() + 33 * 3600e3).toISOString().slice(0, 10);
+
+// 一度読み込んだファイルは覚えておく（失敗したときは次に押したとき読み直す）
+function once(fn) {
+  let p = null;
+  const get = () => (p ||= fn().catch(e => { p = null; throw e; }));
+  get.ready = () => p;
+  return get;
+}
+async function fetchBlob(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("ファイルが見つかりません（" + res.status + "）");
+  return res.blob();
+}
+function shareError(e, get) {
+  if (e.name === "AbortError") return "";
+  // 読み込みに時間がかかってiPhoneに断られた場合。ファイルはもう読み込めているので、次はすぐ出る
+  if (e.name === "NotAllowedError" && get.ready()) return "準備できました。もう一度ボタンを押してください";
+  return "保存できませんでした：" + e.message;
+}
 
 async function load() {
   const res = await fetch("list.json?" + Date.now());
@@ -97,13 +117,16 @@ function card(it, done) {
     <div class="msg"></div>`;
   const msg = el.querySelector(".msg");
   el.querySelectorAll("figure.hide").forEach(f => f.addEventListener("click", () => f.classList.remove("hide")));
+  // iPhoneは「ボタンを押した直後」でないと保存メニューを出させてくれない。
+  // ダウンロードに時間がかかると断られるので、ファイルは先に読み込んでおき、押したらすぐ出す。
+  const getImgs = once(() => Promise.all(nums.map(async n => {
+    const b = await fetchBlob(base + n + ".jpg");
+    return new File([b], `${it.date}_${n}.jpg`, { type: "image/jpeg" });
+  })));
   el.querySelector(".save").onclick = async () => {
     msg.textContent = "準備中…";
     try {
-      const files = await Promise.all(nums.map(async n => {
-        const b = await (await fetch(base + n + ".jpg")).blob();
-        return new File([b], `${it.date}_${n}.jpg`, { type: "image/jpeg" });
-      }));
+      const files = await getImgs();
       if (navigator.canShare && navigator.canShare({ files })) {
         await navigator.share({ files });
         msg.textContent = "共有メニューから「画像を保存」を選んでください";
@@ -111,7 +134,7 @@ function card(it, done) {
         el.querySelectorAll("figure").forEach(f => f.classList.remove("hide"));
         msg.textContent = "この端末ではまとめて保存できません。画像を1枚ずつ長押しして保存してください";
       }
-    } catch (e) { msg.textContent = e.name === "AbortError" ? "" : "保存できませんでした：" + e.message; }
+    } catch (e) { msg.textContent = shareError(e, getImgs); }
   };
   el.querySelector(".copy").onclick = async () => {
     try {
@@ -122,14 +145,15 @@ function card(it, done) {
   };
   if (it.reel) {
     const rbase = "reels/" + it.date + "/";
+    const getReel = once(async () => [new File([await fetchBlob(rbase + "reel.mp4?" + Date.now())], it.date + "_reel.mp4", { type: "video/mp4" })]);
+    if (it.date <= tomorrow) getReel().catch(() => {}); // 今日・明日の動画は先に読み込んでおく
     el.querySelector(".rsave").onclick = async () => {
       msg.textContent = "準備中…";
       try {
-        const b = await (await fetch(rbase + "reel.mp4?" + Date.now())).blob();
-        const files = [new File([b], it.date + "_reel.mp4", { type: "video/mp4" })];
+        const files = await getReel();
         if (navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files }); msg.textContent = "共有メニューから「ビデオを保存」かインスタを選んでください"; }
         else { location.href = rbase + "reel.mp4"; }
-      } catch (e) { msg.textContent = e.name === "AbortError" ? "" : "保存できませんでした：" + e.message; }
+      } catch (e) { msg.textContent = shareError(e, getReel); }
     };
     el.querySelector(".ccopy").onclick = async () => {
       try { const t = await (await fetch(rbase + "comment.txt?" + Date.now())).text(); await navigator.clipboard.writeText(t.trim()); msg.textContent = "答えコメントをコピーしました（中の人の結果を書き足してね）"; }

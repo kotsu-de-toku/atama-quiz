@@ -1,0 +1,38 @@
+# 毎晩23:20ごろ（日本時間）に、インスタの数字（インサイト）を取ってきて暗号化して保存する
+# 読むだけ（投稿はしない）。手動で「Run workflow」からも動かせる
+name: 毎晩の数字あつめ
+
+on:
+  schedule:
+    - cron: "20 14 * * *"   # 14:20 UTC ＝ 23:20 JST
+  workflow_dispatch:
+  push:   # 仕組みを直したときにも1回動かして確かめる
+    paths: [scripts/insights.py, .github/workflows/insights.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post
+  cancel-in-progress: false
+
+jobs:
+  insights:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 数字を取ってくる
+        env:
+          TOKEN_KEY: ${{ secrets.TOKEN_KEY }}
+        run: python3 scripts/insights.py
+      - name: 結果を保存する
+        if: always()
+        run: |
+          git config user.name "kotsu-de-toku-bot"
+          git config user.email "kotsu-de-toku@users.noreply.github.com"
+          git add -A secret
+          if ! git diff --cached --quiet; then
+            git commit -m "数字の記録 $(TZ=Asia/Tokyo date +%F)"
+            git pull --rebase
+            git push
+          fi
